@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Catalog Splitter - 6 Tiles</title>
+    <style>
+        :root {
+            --neon-color: #00f2ff;
+            --bg-color: #0a0a0c;
+            --card-bg: #161b22;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: #ffffff;
+            font-family: 'Poppins', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        .container {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 0 20px rgba(0, 242, 255, 0.2);
+            text-align: center;
+            width: 90%;
+            max-width: 500px;
+            border: 1px solid #30363d;
+            animation: fadeIn 1s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h2 {
+            color: var(--neon-color);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px var(--neon-color);
+        }
+
+        .upload-area {
+            border: 2px dashed #30363d;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            transition: 0.3s;
+            cursor: pointer;
+        }
+
+        .upload-area:hover {
+            border-color: var(--neon-color);
+            background: rgba(0, 242, 255, 0.05);
+        }
+
+        input[type="file"] { display: none; }
+
+        .btn-label {
+            cursor: pointer;
+            font-weight: bold;
+            color: #8b949e;
+        }
+
+        #grid-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr); /* 2 Columns */
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .tile-preview {
+            width: 100%;
+            border-radius: 8px;
+            border: 2px solid transparent;
+            transition: 0.4s;
+            animation: zoomIn 0.5s ease forwards;
+            opacity: 0;
+        }
+
+        @keyframes zoomIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .tile-preview:hover {
+            border-color: var(--neon-color);
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 242, 255, 0.4);
+        }
+
+        .download-btn {
+            margin-top: 25px;
+            padding: 12px 30px;
+            background: linear-gradient(45deg, #00f2ff, #0072ff);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: bold;
+            display: none;
+            text-transform: uppercase;
+            transition: 0.3s;
+            box-shadow: 0 0 15px rgba(0, 242, 255, 0.5);
+        }
+
+        .download-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 25px var(--neon-color);
+        }
+
+        canvas { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>GRID SPLITTER</h2>
+    <p style="color: #8b949e; font-size: 0.9em;">Split your image into 6 tiles for WhatsApp</p>
+    
+    <label class="upload-area" for="imageInput">
+        <span class="btn-label">Click to Upload Image</span>
+        <input type="file" id="imageInput" accept="image/*">
+    </label>
+    
+    <div id="grid-container"></div>
+    
+    <button id="downloadAll" class="download-btn">Download 6 Tiles</button>
+</div>
+
+<canvas id="canvas"></canvas>
+
+<script>
+    const imageInput = document.getElementById('imageInput');
+    const gridContainer = document.getElementById('grid-container');
+    const downloadBtn = document.getElementById('downloadAll');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    imageInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if(!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const img = new Image();
+            img.onload = function() {
+                splitImage(img);
+            }
+            img.src = event.target.result;
+        }
+        reader.readAsDataURL(file);
+    });
+
+    function splitImage(img) {
+        gridContainer.innerHTML = '';
+        
+        // Calculate dimensions for 2 columns and 3 rows (6 total)
+        const tileWidth = img.width / 2;
+        const tileHeight = img.height / 3;
+        
+        canvas.width = tileWidth;
+        canvas.height = tileHeight;
+
+        let tiles = [];
+
+        for (let y = 0; y < 3; y++) {
+            for (let x = 0; x < 2; x++) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, x * tileWidth, y * tileHeight, tileWidth, tileHeight, 0, 0, tileWidth, tileHeight);
+                
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+                tiles.push(dataUrl);
+
+                const imgElement = document.createElement('img');
+                imgElement.src = dataUrl;
+                imgElement.className = 'tile-preview';
+                // Add staggered animation delay
+                imgElement.style.animationDelay = (tiles.length * 0.1) + 's';
+                gridContainer.appendChild(imgElement);
+            }
+        }
+
+        downloadBtn.style.display = 'inline-block';
+        downloadBtn.onclick = () => {
+            tiles.forEach((tile, index) => {
+                setTimeout(() => {
+                    const link = document.createElement('a');
+                    link.download = `whatsapp_tile_${index + 1}.jpg`;
+                    link.href = tile;
+                    link.click();
+                }, index * 200); // Small delay to prevent browser blocking multiple downloads
+            });
+        };
+    }
+</script>
+
+</body>
+</html>
